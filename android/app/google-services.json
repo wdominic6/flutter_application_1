@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "1006034818002",
+    "project_id": "garagestoreapp",
+    "storage_bucket": "garagestoreapp.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1006034818002:android:0ff0bb23d82a2b8e6e6e0b",
+        "android_client_info": {
+          "package_name": "com.example.flutter_application_1"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1006034818002-e8f0f8ll11vo1etnib3koq4tdll33ak3.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD1lQ-iFbur8Iog1sRgQsm5V9J369fNXes"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1006034818002-e8f0f8ll11vo1etnib3koq4tdll33ak3.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
