@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:async'; // Necesario para el StreamSubscription
 import 'dart:math'; // Necesario para calcular la fuerza del movimiento
 import 'package:sensors_plus/sensors_plus.dart'; // El paquete de sensores
+import '../../services/auth_service.dart';
 import '../../services/product_service.dart';
 import '../../models/product.dart';
 import 'product_form_screen.dart';
@@ -17,8 +18,10 @@ class CatalogScreen extends StatefulWidget {
 
 class _CatalogScreenState extends State<CatalogScreen> {
   final _productService = ProductService();
+  final _authService = AuthService();
   List<Product> _products = [];
   bool _isLoading = true;
+  int? _currentUserId;
 
   // Variables para el Acelerómetro
   StreamSubscription<AccelerometerEvent>? _accelerometerSubscription;
@@ -113,16 +116,40 @@ class _CatalogScreenState extends State<CatalogScreen> {
 
   Future<void> _loadProducts() async {
     setState(() => _isLoading = true);
-    final products = await _productService.getProducts();
+    final results = await Future.wait([
+      _productService.getProducts(),
+      _authService.getCurrentUserId(),
+    ]);
+    final products = results[0] as List<Product>;
+    final currentUserId = results[1] as int?;
 
     if (!mounted) return;
     setState(() {
       _products = products;
+      _currentUserId = currentUserId;
       _isLoading = false;
     });
   }
 
-  void _deleteProduct(int id) async {
+  Future<void> _editProduct(Product product) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ProductFormScreen(productToEdit: product),
+      ),
+    );
+    if (result == true) _loadProducts();
+  }
+
+  void _deleteProduct(Product product) async {
+    final id = product.id;
+    if (id == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No se puede eliminar este producto.')),
+      );
+      return;
+    }
+
     bool success = await _productService.deleteProduct(id);
     if (!mounted) return;
 
@@ -142,7 +169,21 @@ class _CatalogScreenState extends State<CatalogScreen> {
         backgroundColor: Colors.teal,
         foregroundColor: Colors.white,
         actions: [
-          IconButton(icon: const Icon(Icons.refresh), onPressed: _loadProducts),
+          IconButton(
+            icon: const Icon(Icons.exit_to_app),
+            tooltip: 'Cerrar Sesión',
+            onPressed: () async {
+              // 1. Llamamos al servicio para borrar el token
+              final nav = Navigator.of(context);
+              await _authService.logout();
+
+              if (!mounted) return;
+
+              // 2. Lo mandamos al Login y borramos el historial de pantallas
+              // para que no pueda volver atrás con el botón del celular
+              nav.pushNamedAndRemoveUntil('/login', (route) => false);
+            },
+          ),
         ],
       ),
       body: _isLoading
@@ -153,6 +194,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
               itemCount: _products.length,
               itemBuilder: (context, index) {
                 final product = _products[index];
+                final canManage = product.canBeManagedBy(_currentUserId);
                 return Card(
                   margin: const EdgeInsets.all(10),
                   child: ListTile(
@@ -190,11 +232,18 @@ class _CatalogScreenState extends State<CatalogScreen> {
                           tooltip: 'Contactar por WhatsApp',
                           onPressed: () => _contactSeller(product.name),
                         ),
-                        // Botón de eliminar (el que ya tenías)
-                        IconButton(
-                          icon: const Icon(Icons.delete, color: Colors.red),
-                          onPressed: () => _deleteProduct(product.id!),
-                        ),
+                        if (canManage) ...[
+                          IconButton(
+                            icon: const Icon(Icons.edit, color: Colors.teal),
+                            tooltip: 'Editar producto',
+                            onPressed: () => _editProduct(product),
+                          ),
+                          IconButton(
+                            icon: const Icon(Icons.delete, color: Colors.red),
+                            tooltip: 'Eliminar producto',
+                            onPressed: () => _deleteProduct(product),
+                          ),
+                        ],
                       ],
                     ),
                   ),

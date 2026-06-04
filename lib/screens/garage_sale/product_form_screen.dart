@@ -1,11 +1,16 @@
-import 'package:flutter/material.dart';
 import 'dart:io';
-import 'package:image_picker/image_picker.dart';
+
+import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
+import 'package:image_picker/image_picker.dart';
+
+import '../../models/product.dart';
 import '../../services/product_service.dart';
 
 class ProductFormScreen extends StatefulWidget {
-  const ProductFormScreen({super.key});
+  final Product? productToEdit;
+
+  const ProductFormScreen({super.key, this.productToEdit});
 
   @override
   State<ProductFormScreen> createState() => _ProductFormScreenState();
@@ -23,123 +28,177 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
   double? _longitude;
   bool _isLoading = false;
 
-  // 1. CAPTURA DE IMÁGENES (Cámara o Galería)
+  bool get _isEditing => widget.productToEdit != null;
+
+  @override
+  void initState() {
+    super.initState();
+
+    final product = widget.productToEdit;
+    if (product != null) {
+      _nameController.text = product.name;
+      _descriptionController.text = product.description ?? '';
+      _priceController.text = product.price.toStringAsFixed(2);
+      _latitude = product.latitude;
+      _longitude = product.longitude;
+    }
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    _descriptionController.dispose();
+    _priceController.dispose();
+    super.dispose();
+  }
+
   Future<void> _pickImage(ImageSource source) async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: source, imageQuality: 80);
 
-    if (pickedFile != null) {
-      setState(() {
-        _imageFile = File(pickedFile.path);
-      });
-    }
+    if (pickedFile == null) return;
+
+    setState(() {
+      _imageFile = File(pickedFile.path);
+    });
   }
 
-  // 2. GEOLOCALIZACIÓN (Obtener coordenadas actuales)
   Future<void> _getLocation() async {
-    bool serviceEnabled;
-    LocationPermission permission;
+    final scaffoldMsg = ScaffoldMessenger.of(context);
 
-    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Por favor, activa el GPS del dispositivo.'),
-        ),
+      scaffoldMsg.showSnackBar(
+        const SnackBar(content: Text('Por favor, activa el GPS.')),
       );
       return;
     }
 
-    permission = await Geolocator.checkPermission();
+    var permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Permiso de ubicación denegado.')),
+        scaffoldMsg.showSnackBar(
+          const SnackBar(content: Text('Permiso de ubicacion denegado.')),
         );
         return;
       }
     }
 
+    if (permission == LocationPermission.deniedForever) {
+      scaffoldMsg.showSnackBar(
+        const SnackBar(
+          content: Text('Activa el permiso de ubicacion desde ajustes.'),
+        ),
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
     try {
-      Position position = await Geolocator.getCurrentPosition(
+      final position = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.high,
       );
+      if (!mounted) return;
       setState(() {
         _latitude = position.latitude;
         _longitude = position.longitude;
         _isLoading = false;
       });
-    } catch (e) {
+    } catch (error) {
+      if (!mounted) return;
       setState(() => _isLoading = false);
+      scaffoldMsg.showSnackBar(
+        SnackBar(content: Text('No se pudo obtener ubicacion: $error')),
+      );
     }
   }
 
-  void _handleSubmit() async {
-    if (_formKey.currentState!.validate()) {
-      setState(() => _isLoading = true);
+  Future<void> _handleSubmit() async {
+    if (!_formKey.currentState!.validate()) return;
 
-      bool success = await _productService.createProduct(
-        name: _nameController.text.trim(),
-        description: _descriptionController.text.trim(),
-        price: double.parse(_priceController.text.trim()),
-        imageFile: _imageFile,
-        latitude: _latitude,
-        longitude: _longitude,
+    final nav = Navigator.of(context);
+    final scaffoldMsg = ScaffoldMessenger.of(context);
+    final product = widget.productToEdit;
+    final price = double.parse(_priceController.text.trim());
+
+    setState(() => _isLoading = true);
+
+    final success = _isEditing && product?.id != null
+        ? await _productService.updateProduct(
+            id: product!.id!,
+            name: _nameController.text.trim(),
+            description: _descriptionController.text.trim(),
+            price: price,
+            imageFile: _imageFile,
+            latitude: _latitude,
+            longitude: _longitude,
+          )
+        : await _productService.createProduct(
+            name: _nameController.text.trim(),
+            description: _descriptionController.text.trim(),
+            price: price,
+            imageFile: _imageFile,
+            latitude: _latitude,
+            longitude: _longitude,
+          );
+
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+
+    if (success) {
+      scaffoldMsg.showSnackBar(
+        SnackBar(
+          content: Text(
+            _isEditing
+                ? 'Producto actualizado correctamente'
+                : 'Producto publicado correctamente',
+          ),
+        ),
       );
-
-      if (!mounted) return;
-      setState(() => _isLoading = false);
-
-      if (success) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('¡Producto publicado exitosamente!')),
-        );
-        Navigator.pop(
-          context,
-          true,
-        ); // Regresa al catálogo mandando señal de éxito
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Error al conectar con el servidor.')),
-        );
-      }
+      nav.pop(true);
+    } else {
+      scaffoldMsg.showSnackBar(
+        const SnackBar(content: Text('No se pudo guardar el producto.')),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final existingImage = widget.productToEdit?.imagePath;
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Publicar Artículo'),
+        title: Text(_isEditing ? 'Editar articulo' : 'Publicar articulo'),
         backgroundColor: Colors.teal,
         foregroundColor: Colors.white,
       ),
       body: Padding(
-        padding: const EdgeInsets.all(20.0),
+        padding: const EdgeInsets.all(20),
         child: SingleChildScrollView(
           child: Form(
             key: _formKey,
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 TextFormField(
                   controller: _nameController,
+                  enabled: !_isLoading,
                   decoration: const InputDecoration(
-                    labelText: 'Nombre del Producto',
+                    labelText: 'Nombre del producto',
                     border: OutlineInputBorder(),
                   ),
-                  validator: (value) =>
-                      value!.isEmpty ? 'Ingresa el nombre' : null,
+                  validator: (value) => value == null || value.trim().isEmpty
+                      ? 'Ingresa el nombre'
+                      : null,
                 ),
                 const SizedBox(height: 15),
                 TextFormField(
                   controller: _descriptionController,
+                  enabled: !_isLoading,
                   decoration: const InputDecoration(
-                    labelText: 'Descripción',
+                    labelText: 'Descripcion',
                     border: OutlineInputBorder(),
                   ),
                   maxLines: 3,
@@ -147,89 +206,132 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                 const SizedBox(height: 15),
                 TextFormField(
                   controller: _priceController,
+                  enabled: !_isLoading,
                   decoration: const InputDecoration(
-                    labelText: 'Precio (\$)',
+                    labelText: 'Precio',
+                    prefixText: '\$ ',
                     border: OutlineInputBorder(),
                   ),
-                  keyboardType: TextInputType.number,
-                  validator: (value) =>
-                      value!.isEmpty ? 'Ingresa el precio' : null,
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
+                  validator: (value) {
+                    final price = double.tryParse(value?.trim() ?? '');
+                    if (price == null || price <= 0) {
+                      return 'Ingresa un precio valido';
+                    }
+                    return null;
+                  },
                 ),
                 const SizedBox(height: 20),
-
-                // Zona de previsualización de la imagen
-                _imageFile != null
-                    ? Image.file(
-                        _imageFile!,
-                        height: 150,
-                        width: double.infinity,
-                        fit: BoxFit.cover,
-                      )
-                    : Container(
-                        height: 150,
-                        color: Colors.grey[200],
-                        child: const Icon(
-                          Icons.image,
-                          size: 50,
-                          color: Colors.grey,
-                        ),
-                      ),
-
+                _ProductImagePreview(
+                  imageFile: _imageFile,
+                  existingImageUrl: existingImage,
+                ),
+                const SizedBox(height: 8),
                 Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    TextButton.icon(
-                      onPressed: () => _pickImage(ImageSource.camera),
-                      icon: const Icon(Icons.camera_alt),
-                      label: const Text('Cámara'),
+                    Expanded(
+                      child: TextButton.icon(
+                        onPressed: _isLoading
+                            ? null
+                            : () => _pickImage(ImageSource.camera),
+                        icon: const Icon(Icons.camera_alt),
+                        label: const Text('Camara'),
+                      ),
                     ),
-                    TextButton.icon(
-                      onPressed: () => _pickImage(ImageSource.gallery),
-                      icon: const Icon(Icons.photo_library),
-                      label: const Text('Galería'),
+                    Expanded(
+                      child: TextButton.icon(
+                        onPressed: _isLoading
+                            ? null
+                            : () => _pickImage(ImageSource.gallery),
+                        icon: const Icon(Icons.photo_library),
+                        label: const Text('Galeria'),
+                      ),
                     ),
                   ],
                 ),
                 const Divider(),
-
-                // Zona GPS
                 ListTile(
+                  contentPadding: EdgeInsets.zero,
                   leading: const Icon(Icons.location_on, color: Colors.teal),
                   title: Text(
                     _latitude != null
-                        ? 'Ubicación Capturada'
-                        : 'Ubicación no establecida',
+                        ? 'Ubicacion capturada'
+                        : 'Ubicacion no establecida',
                   ),
                   subtitle: Text(
                     _latitude != null
                         ? 'Lat: $_latitude, Lon: $_longitude'
-                        : 'Haz clic para obtener las coordenadas',
+                        : 'Toca el icono para obtener coordenadas',
                   ),
                   trailing: IconButton(
                     icon: const Icon(Icons.gps_fixed),
-                    onPressed: _getLocation,
+                    onPressed: _isLoading ? null : _getLocation,
                   ),
                 ),
                 const SizedBox(height: 30),
-
-                _isLoading
-                    ? const CircularProgressIndicator()
-                    : ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          minimumSize: const Size.fromHeight(50),
-                          backgroundColor: Colors.teal,
-                        ),
-                        onPressed: _handleSubmit,
-                        child: const Text(
-                          'Guardar Producto',
-                          style: TextStyle(color: Colors.white, fontSize: 16),
-                        ),
-                      ),
+                FilledButton(
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size.fromHeight(50),
+                    backgroundColor: Colors.teal,
+                  ),
+                  onPressed: _isLoading ? null : _handleSubmit,
+                  child: _isLoading
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Text(_isEditing ? 'Actualizar producto' : 'Guardar'),
+                ),
               ],
             ),
           ),
         ),
       ),
+    );
+  }
+}
+
+class _ProductImagePreview extends StatelessWidget {
+  final File? imageFile;
+  final String? existingImageUrl;
+
+  const _ProductImagePreview({
+    required this.imageFile,
+    required this.existingImageUrl,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (imageFile != null) {
+      return Image.file(
+        imageFile!,
+        height: 160,
+        width: double.infinity,
+        fit: BoxFit.cover,
+      );
+    }
+
+    if (existingImageUrl != null && existingImageUrl!.isNotEmpty) {
+      return Image.network(
+        existingImageUrl!,
+        height: 160,
+        width: double.infinity,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) => _placeholder(),
+      );
+    }
+
+    return _placeholder();
+  }
+
+  Widget _placeholder() {
+    return Container(
+      height: 160,
+      color: Colors.grey[200],
+      child: const Icon(Icons.image, size: 50, color: Colors.grey),
     );
   }
 }

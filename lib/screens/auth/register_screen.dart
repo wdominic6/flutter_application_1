@@ -19,6 +19,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   void _handleRegister() async {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
+      final nav = Navigator.of(context);
+      final scaffoldMsg = ScaffoldMessenger.of(context);
 
       String? error = await _authService.register(
         _nameController.text.trim(),
@@ -26,10 +28,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         _passwordController.text.trim(),
       );
 
-      if (!context.mounted) return;
-
-      final nav = Navigator.of(context);
-      final scaffoldMsg = ScaffoldMessenger.of(context);
+      if (!mounted) return;
 
       setState(() => _isLoading = false);
 
@@ -39,11 +38,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         );
         nav.pop(); // Regresa al Login automáticamente
       } else {
-        scaffoldMsg.showSnackBar(
-          SnackBar(
-            content: Text(error),
-          ),
-        );
+        scaffoldMsg.showSnackBar(SnackBar(content: Text(error)));
       }
     }
   }
