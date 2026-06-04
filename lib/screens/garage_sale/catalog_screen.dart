@@ -6,7 +6,7 @@ import '../../services/auth_service.dart';
 import '../../services/product_service.dart';
 import '../../models/product.dart';
 import 'product_form_screen.dart';
-import 'map_screen.dart';
+import 'product_detail_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class CatalogScreen extends StatefulWidget {
@@ -202,7 +202,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => MapScreen(product: product),
+                          builder: (context) => ProductDetailScreen(product: product),
                         ),
                       );
                     },
