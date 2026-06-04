@@ -1,11 +1,12 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:latlong2/latlong.dart';
 
 import '../../models/product.dart';
 import '../../services/product_service.dart';
+import 'location_picker_screen.dart';
 
 class ProductFormScreen extends StatefulWidget {
   final Product? productToEdit;
@@ -63,54 +64,23 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
     });
   }
 
-  Future<void> _getLocation() async {
-    final scaffoldMsg = ScaffoldMessenger.of(context);
+  Future<void> _pickLocation() async {
+    final initialLocation = _latitude != null && _longitude != null 
+        ? LatLng(_latitude!, _longitude!) 
+        : null;
 
-    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if (!serviceEnabled) {
-      scaffoldMsg.showSnackBar(
-        const SnackBar(content: Text('Por favor, activa el GPS.')),
-      );
-      return;
-    }
+    final LatLng? selectedLocation = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => LocationPickerScreen(initialLocation: initialLocation),
+      ),
+    );
 
-    var permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) {
-        scaffoldMsg.showSnackBar(
-          const SnackBar(content: Text('Permiso de ubicacion denegado.')),
-        );
-        return;
-      }
-    }
-
-    if (permission == LocationPermission.deniedForever) {
-      scaffoldMsg.showSnackBar(
-        const SnackBar(
-          content: Text('Activa el permiso de ubicacion desde ajustes.'),
-        ),
-      );
-      return;
-    }
-
-    setState(() => _isLoading = true);
-    try {
-      final position = await Geolocator.getCurrentPosition(
-        desiredAccuracy: LocationAccuracy.high,
-      );
-      if (!mounted) return;
+    if (selectedLocation != null) {
       setState(() {
-        _latitude = position.latitude;
-        _longitude = position.longitude;
-        _isLoading = false;
+        _latitude = selectedLocation.latitude;
+        _longitude = selectedLocation.longitude;
       });
-    } catch (error) {
-      if (!mounted) return;
-      setState(() => _isLoading = false);
-      scaffoldMsg.showSnackBar(
-        SnackBar(content: Text('No se pudo obtener ubicacion: $error')),
-      );
     }
   }
 
@@ -254,21 +224,19 @@ class _ProductFormScreenState extends State<ProductFormScreen> {
                 const Divider(),
                 ListTile(
                   contentPadding: EdgeInsets.zero,
-                  leading: const Icon(Icons.location_on, color: Colors.teal),
+                  leading: const Icon(Icons.map, color: Colors.teal),
                   title: Text(
                     _latitude != null
-                        ? 'Ubicacion capturada'
-                        : 'Ubicacion no establecida',
+                        ? 'Ubicación seleccionada'
+                        : 'Ubicación no establecida',
                   ),
                   subtitle: Text(
                     _latitude != null
-                        ? 'Lat: $_latitude, Lon: $_longitude'
-                        : 'Toca el icono para obtener coordenadas',
+                        ? 'Ubicación configurada en el mapa'
+                        : 'Toca aquí para elegir en el mapa',
                   ),
-                  trailing: IconButton(
-                    icon: const Icon(Icons.gps_fixed),
-                    onPressed: _isLoading ? null : _getLocation,
-                  ),
+                  onTap: _isLoading ? null : _pickLocation,
+                  trailing: const Icon(Icons.chevron_right),
                 ),
                 const SizedBox(height: 30),
                 FilledButton(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import '../../models/product.dart';
 
 class MapScreen extends StatelessWidget {
@@ -31,24 +32,48 @@ class MapScreen extends StatelessWidget {
                 style: TextStyle(fontSize: 16),
               ),
             )
-          : GoogleMap(
-              initialCameraPosition: CameraPosition(
-                target: position,
-                zoom: 16.0, // Nivel de acercamiento a las calles
+          : FlutterMap(
+              options: MapOptions(
+                initialCenter: position,
+                initialZoom: 16.0,
               ),
-              markers: {
-                Marker(
-                  markerId: MarkerId('vendedor_${product.id}'),
-                  position: position,
-                  infoWindow: InfoWindow(
-                    title: 'Venta de: ${product.name}',
-                    snippet: 'Precio: \$${product.price.toStringAsFixed(2)}',
-                  ),
-                  icon: BitmapDescriptor.defaultMarkerWithHue(
-                    BitmapDescriptor.hueRed,
-                  ),
+              children: [
+                TileLayer(
+                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'com.example.flutter_application_1',
                 ),
-              },
+                MarkerLayer(
+                  markers: [
+                    Marker(
+                      point: position,
+                      width: 80,
+                      height: 80,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(8),
+                              boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 4)],
+                            ),
+                            child: Text(
+                              '\$${product.price.toStringAsFixed(2)}',
+                              style: const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                          const Icon(
+                            Icons.location_on,
+                            color: Colors.red,
+                            size: 40,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
     );
   }
