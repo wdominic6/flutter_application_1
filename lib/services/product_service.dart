@@ -23,7 +23,7 @@ class ProductService {
           .get(
             url,
             headers: {
-              'Authorization': 'Bearer $token',
+              if (token != null) 'Authorization': 'Bearer $token',
               'Accept': 'application/json',
             },
           )
@@ -45,11 +45,15 @@ class ProductService {
   }
 
   List<Map<String, dynamic>> _extractProductsList(dynamic body) {
-    final dynamic listBody = body is List
-        ? body
-        : body is Map
-        ? body['data'] ?? body['products'] ?? body['items']
-        : null;
+    dynamic listBody = body;
+
+    if (body is Map) {
+      listBody = body['data'] ?? body['products'] ?? body['items'] ?? body;
+    }
+
+    if (listBody is Map) {
+      listBody = listBody['data'] ?? listBody['products'] ?? listBody['items'] ?? listBody;
+    }
 
     if (listBody is! List) return [];
 

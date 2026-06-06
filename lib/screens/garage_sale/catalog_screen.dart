@@ -7,6 +7,7 @@ import '../../services/product_service.dart';
 import '../../models/product.dart';
 import 'product_form_screen.dart';
 import 'product_detail_screen.dart';
+import 'list_products_screen.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class CatalogScreen extends StatefulWidget {
@@ -60,7 +61,6 @@ class _CatalogScreenState extends State<CatalogScreen> {
       );
     }
   }
-
   // --- LÓGICA DEL SENSOR (ACELERÓMETRO) ---
   void _startAccelerometer() {
     _accelerometerSubscription = accelerometerEventStream().listen((
@@ -169,6 +169,16 @@ class _CatalogScreenState extends State<CatalogScreen> {
         backgroundColor: Colors.teal,
         foregroundColor: Colors.white,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.list_alt),
+            tooltip: 'Ver Reporte',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ListProductsScreen()),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.exit_to_app),
             tooltip: 'Cerrar Sesión',
