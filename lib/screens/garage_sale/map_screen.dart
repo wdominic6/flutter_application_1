@@ -10,11 +10,11 @@ class MapScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Verificamos si el producto tiene coordenadas guardadas
+    
     final bool hasLocation =
         product.latitude != null && product.longitude != null;
 
-    // Si tiene ubicación, creamos el objeto LatLng (Latitud, Longitud)
+    
     final LatLng position = hasLocation
         ? LatLng(product.latitude!, product.longitude!)
         : const LatLng(0, 0);

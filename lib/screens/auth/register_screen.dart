@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../services/auth_service.dart'; // Si tu archivo se llama auth_sevice.dart, cámbialo aquí a auth_sevice.dart
+import '../../services/auth_service.dart'; 
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -36,7 +36,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         scaffoldMsg.showSnackBar(
           const SnackBar(content: Text('¡Cuenta creada exitosamente!')),
         );
-        nav.pop(); // Regresa al Login automáticamente
+        nav.pop(); 
       } else {
         scaffoldMsg.showSnackBar(SnackBar(content: Text(error)));
       }

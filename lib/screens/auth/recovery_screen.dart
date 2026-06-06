@@ -26,7 +26,7 @@ class _RecoveryScreenState extends State<RecoveryScreen> {
       setState(() => _isLoading = false);
 
       if (tempPassword != null) {
-        // Mostramos un diálogo con la contraseña temporal generada por Laravel
+        
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
@@ -37,8 +37,8 @@ class _RecoveryScreenState extends State<RecoveryScreen> {
             actions: [
               TextButton(
                 onPressed: () {
-                  Navigator.pop(context); // Cierra diálogo
-                  Navigator.pop(context); // Vuelve al login
+                  Navigator.pop(context); 
+                  Navigator.pop(context); 
                 },
                 child: const Text('Entendido'),
               ),

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'dart:async'; // Necesario para el StreamSubscription
-import 'dart:math'; // Necesario para calcular la fuerza del movimiento
-import 'package:sensors_plus/sensors_plus.dart'; // El paquete de sensores
+import 'dart:async'; 
+import 'dart:math'; 
+import 'package:sensors_plus/sensors_plus.dart'; 
 import '../../services/auth_service.dart';
 import '../../services/product_service.dart';
 import '../../models/product.dart';
@@ -24,10 +24,10 @@ class _CatalogScreenState extends State<CatalogScreen> {
   bool _isLoading = true;
   int? _currentUserId;
 
-  // Variables para el Acelerómetro
+  
   StreamSubscription<AccelerometerEvent>? _accelerometerSubscription;
   DateTime _lastWarningTime =
-      DateTime.now(); // Para no saturar al usuario con alertas
+      DateTime.now(); 
 
   @override
   void initState() {
@@ -37,19 +37,19 @@ class _CatalogScreenState extends State<CatalogScreen> {
   }
 
   void _contactSeller(String productName) async {
-    // Número de prueba (reemplázalo por el tuyo con código de país, ej: 52 para México, 51 para Perú)
-    // En un caso real, este número vendría del modelo 'product.seller_phone'
+    
+    
     const String phoneNumber = "51949769189";
 
     final String message =
         "Hola! Estoy interesado en tu artículo '$productName' que vi en la App de Venta de Garage.";
 
-    // Creamos la URL codificada con el formato oficial de WhatsApp
+    
     final Uri whatsappUri = Uri.parse(
       "https://wa.me/$phoneNumber?text=${Uri.encodeComponent(message)}",
     );
 
-    // Verificamos si se puede abrir y la lanzamos
+    
     if (await canLaunchUrl(whatsappUri)) {
       await launchUrl(whatsappUri, mode: LaunchMode.externalApplication);
     } else {
@@ -61,20 +61,20 @@ class _CatalogScreenState extends State<CatalogScreen> {
       );
     }
   }
-  // --- LÓGICA DEL SENSOR (ACELERÓMETRO) ---
+  
   void _startAccelerometer() {
     _accelerometerSubscription = accelerometerEventStream().listen((
       AccelerometerEvent event,
     ) {
-      // Calculamos la magnitud total del movimiento (Fórmula matemática vectorial)
-      // Restamos aprox 9.8 que es la gravedad de la tierra para obtener solo el movimiento del usuario
+      
+      
       double acceleration =
           sqrt(event.x * event.x + event.y * event.y + event.z * event.z) - 9.8;
 
-      // Si la aceleración es mayor a 5 (un sacudón o caminar rápido)
+      
       if (acceleration > 5.0 || acceleration < -5.0) {
         final now = DateTime.now();
-        // Solo mostramos la advertencia si pasaron al menos 10 segundos desde la última vez
+        
         if (now.difference(_lastWarningTime).inSeconds > 10) {
           _lastWarningTime = now;
           _showSafetyWarning();
@@ -106,13 +106,13 @@ class _CatalogScreenState extends State<CatalogScreen> {
     );
   }
 
-  // Al salir de la pantalla, apagamos el sensor para ahorrar batería
+  
   @override
   void dispose() {
     _accelerometerSubscription?.cancel();
     super.dispose();
   }
-  // ----------------------------------------
+  
 
   Future<void> _loadProducts() async {
     setState(() => _isLoading = true);
@@ -157,7 +157,7 @@ class _CatalogScreenState extends State<CatalogScreen> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Producto eliminado')));
-      _loadProducts(); // Recarga la lista
+      _loadProducts(); 
     }
   }
 
@@ -183,14 +183,14 @@ class _CatalogScreenState extends State<CatalogScreen> {
             icon: const Icon(Icons.exit_to_app),
             tooltip: 'Cerrar Sesión',
             onPressed: () async {
-              // 1. Llamamos al servicio para borrar el token
+              
               final nav = Navigator.of(context);
               await _authService.logout();
 
               if (!mounted) return;
 
-              // 2. Lo mandamos al Login y borramos el historial de pantallas
-              // para que no pueda volver atrás con el botón del celular
+              
+              
               nav.pushNamedAndRemoveUntil('/login', (route) => false);
             },
           ),
@@ -234,9 +234,9 @@ class _CatalogScreenState extends State<CatalogScreen> {
                     isThreeLine: true,
                     trailing: Row(
                       mainAxisSize: MainAxisSize
-                          .min, // Evita que el renglón ocupe toda la pantalla
+                          .min, 
                       children: [
-                        // Botón de WhatsApp 👇
+                        
                         IconButton(
                           icon: const Icon(Icons.chat, color: Colors.green),
                           tooltip: 'Contactar por WhatsApp',

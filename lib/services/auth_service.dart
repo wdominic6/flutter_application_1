@@ -168,16 +168,16 @@ class AuthService {
     return _storage.read(key: 'access_token');
   }
 
-  /// Returns the current user ID. First tries local storage (fast),
-  /// then falls back to the /api/user endpoint.
+  
+  
   Future<int?> getCurrentUserId() async {
-    // Try local cache first
+    
     final cachedId = await _storage.read(key: 'user_id');
     if (cachedId != null && cachedId.isNotEmpty) {
       return int.tryParse(cachedId);
     }
 
-    // Fall back to API
+    
     final token = await getToken();
     if (token == null || token.isEmpty) return null;
 

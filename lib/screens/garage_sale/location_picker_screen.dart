@@ -22,7 +22,7 @@ class _LocationPickerScreenState extends State<LocationPickerScreen> {
     super.initState();
     _selectedLocation = widget.initialLocation;
     
-    // Si no hay ubicación inicial, intentamos obtener la del GPS automáticamente
+    
     if (_selectedLocation == null) {
       _getCurrentLocation();
     }
